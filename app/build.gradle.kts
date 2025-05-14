@@ -59,5 +59,8 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
-
+    implementation ("androidx.compose.ui:ui:1.0.5") // or latest version
+    implementation ("androidx.compose.material3:material3:1.0.0") // or latest version
+    implementation ("androidx.lifecycle:lifecycle-viewmodel-compose:2.4.0") // for ViewModel and LiveData integration with Compose
+    implementation ("androidx.compose.runtime:runtime-livedata:1.0.5") // for LiveData support in Compose
 }

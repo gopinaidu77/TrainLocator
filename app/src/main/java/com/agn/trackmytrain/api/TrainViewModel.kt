@@ -1,42 +1,61 @@
-package com.agn.trackmytrain
+package com.agn.trackmytrain.viewmodel
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.agn.trackmytrain.api.RetrofitClient
+import com.agn.trackmytrain.api.ApiClient
 import com.agn.trackmytrain.api.TrainLocationResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import retrofit2.HttpException
-import java.io.IOException
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
 class TrainViewModel : ViewModel() {
 
-    fun getTrainLocation(
-        trainNo: String,
-        onSuccess: (TrainLocationResponse) -> Unit,
-        onError: (Throwable) -> Unit
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val dateFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-                val currentDate = dateFormat.format(Date())
+    private val _trainLocation = MutableLiveData<TrainLocationResponse.Data?>()
+    val trainLocation: LiveData<TrainLocationResponse.Data?> = _trainLocation
 
-                val response = RetrofitClient.apiService
-                    .getTrainLocation(trainNo = trainNo, startDate = currentDate)
-                    .execute()
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
+    // Get current date in the format YYYYMMDD
+    private fun getCurrentDate(): String {
+        val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+        return sdf.format(Date())
+    }
+
+    // Fetch train location
+    fun getTrainLocation(trainNo: String) {
+        _isLoading.value = true
+        _errorMessage.value = null  // Clear previous errors
+        val startDate = getCurrentDate()  // Get today's date
+
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    ApiClient.apiService.getTrainLocation(trainNo, startDate).execute()
+                }
 
                 if (response.isSuccessful && response.body() != null) {
-                    onSuccess(response.body()!!)
+                    _trainLocation.value = response.body()!!.data
                 } else {
-                    onError(HttpException(response))
+                    _errorMessage.value = "Error: ${response.code()} - ${response.message()}"
                 }
-            } catch (e: IOException) {
-                onError(e)
             } catch (e: Exception) {
-                onError(e)
+                _errorMessage.value = "Network Error: ${e.localizedMessage}"
+            } finally {
+                _isLoading.value = false
             }
         }
+    }
+
+    // Set custom error message
+    fun setErrorMessage(message: String) {
+        _errorMessage.value = message
     }
 }
